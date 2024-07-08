@@ -1,24 +1,14 @@
 pub(crate) mod ast;
+pub(crate) mod cli;
 pub(crate) mod lexer;
 
-use ast::Token;
 use lexer::Lexer;
+use std::env;
 
 fn main() {
-    // let mut inpt = "시험".to_string();
-    let mut inpt = "1+1".to_string();
+    let mut expression: String = cli::parse_input(env::args());
 
-    let mut lex = Lexer::new(&mut inpt);
-
-    while let Some(tkn) = lex.next() {
-        if tkn == Token::Eos {
-            break;
-        }
-
-        println!("{:?}", tkn);
-    }
-
-    println!("{:?}", lex);
+    let lexer = Lexer::new(&mut expression);
 
     println!("Hello, world!");
 }
