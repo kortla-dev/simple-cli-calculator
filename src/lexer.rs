@@ -49,6 +49,7 @@ impl Iterator for Lexer<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.peek_char().is_none() {
+            // TODO: Consider removing Token::Eos in favor of using None to represent the end of the stream.
             return Some(Token::Eos);
         }
 

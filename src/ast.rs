@@ -2,7 +2,7 @@
 // - only simple expressions will be supported
 // - all numbers must be positive
 // - only grouping with () and * / + - will be supported
-// - 5(2+1) will not be interpreted as 5*(2+1) this must be specified
+// - x(y+z) will not be interpreted as x*(y+z) this must be specified
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Paren {
@@ -23,6 +23,7 @@ pub(crate) enum Token {
     Parenthesis(Paren),
     Operator(BinOp),
     Number(f64),
+    // NOTE: Look at .next TODO in lexer.rs
     Eos,
 }
 
@@ -43,7 +44,6 @@ impl Token {
         Token::Number(num.parse::<f64>().unwrap())
     }
 }
-
 /// Parser grammar
 /// ```text
 /// E  -> TE'
@@ -74,9 +74,17 @@ pub(crate) enum Node {
     Factor { id: f64 },
     /// (E)
     Paren { e: Box<Self> },
+    /// Epsilon
+    Eps,
 }
 
 #[derive(Debug)]
 pub(crate) struct Ast {
     root: Node,
+}
+
+impl Ast {
+    pub fn new(root: Node) -> Self {
+        Self { root }
+    }
 }
