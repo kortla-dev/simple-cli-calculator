@@ -3,8 +3,7 @@ mod cli;
 mod lexer;
 mod parser;
 
-use lexer::Lexer;
-use parser::LL1;
+use crate::{lexer::Lexer, parser::LL1};
 use std::env;
 
 fn main() {
@@ -12,7 +11,9 @@ fn main() {
 
     let lexer = Lexer::new(&mut expression);
 
-    let parser = LL1::new(lexer);
+    let mut parser = LL1::new(lexer);
+
+    let ast = parser.get_ast();
 
     println!("Hello, world!");
 }

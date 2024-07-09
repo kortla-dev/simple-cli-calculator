@@ -4,13 +4,22 @@
 // - only grouping with () and * / + - will be supported
 // - x(y+z) will not be interpreted as x*(y+z) this must be specified
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Paren {
     OParen,
     CParen,
 }
 
-#[derive(Debug, PartialEq)]
+impl Paren {
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            Paren::OParen => "(",
+            Paren::CParen => ")",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum BinOp {
     Mul,
     Div,
@@ -18,12 +27,22 @@ pub(crate) enum BinOp {
     Sub,
 }
 
-#[derive(Debug, PartialEq)]
+impl BinOp {
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Token {
     Parenthesis(Paren),
     Operator(BinOp),
     Number(f64),
-    // NOTE: Look at .next TODO in lexer.rs
     Eos,
 }
 
@@ -43,7 +62,38 @@ impl Token {
     pub(crate) fn build_num_token(num: String) -> Self {
         Token::Number(num.parse::<f64>().unwrap())
     }
+
+    pub fn get_paren(self) -> Paren {
+        match self {
+            Token::Parenthesis(inner) => inner,
+            _ => panic!("Token was not a Parenthesis"),
+        }
+    }
+
+    pub fn get_op(self) -> BinOp {
+        match self {
+            Token::Operator(inner) => inner,
+            _ => panic!("Token was not a Operator"),
+        }
+    }
+
+    pub fn get_num(self) -> f64 {
+        match self {
+            Token::Number(inner) => inner,
+            _ => panic!("Token was not a Number"),
+        }
+    }
+
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            Token::Parenthesis(inner) => inner.as_terminal(),
+            Token::Operator(inner) => inner.as_terminal(),
+            Token::Number(_) => "id",
+            Token::Eos => "$",
+        }
+    }
 }
+
 /// Parser grammar
 /// ```text
 /// E  -> TE'

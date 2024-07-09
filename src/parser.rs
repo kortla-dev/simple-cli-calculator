@@ -1,5 +1,5 @@
-use crate::ast::{Ast, Node, Token};
-use std::collections::HashMap;
+use crate::ast::{self, Ast, Node, Token};
+use std::{collections::HashMap, mem};
 
 type ParserTable<'tbl> = HashMap<(&'tbl str, &'tbl str), Vec<&'tbl str>>;
 
@@ -36,27 +36,65 @@ pub(crate) struct LL1<'prsr, I>
 where
     I: Iterator<Item = Token>,
 {
-    parser_table: ParserTable<'prsr>,
-    token_stream: I,
+    stack: Vec<&'prsr str>,
+    prsr_tbl: ParserTable<'prsr>,
+    tkn_strm: I,
+    cur_tkn: Token,
 }
 
 impl<I> LL1<'_, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn new(token_stream: I) -> Self {
-        let parser_table: ParserTable = get_table();
+    pub fn new(tkn_strm: I) -> Self {
+        let stack = vec!["$", "E"];
+        let prsr_tbl: ParserTable = get_table();
+        let cur_tkn = Token::Eos;
 
         Self {
-            parser_table,
-            token_stream,
+            stack,
+            prsr_tbl,
+            tkn_strm,
+            cur_tkn,
         }
     }
 
     pub fn get_ast(&mut self) -> Ast {
+        self.dbg("START");
         let root = self.expr();
-
+        println!("{:#?}", root);
         Ast::new(root)
+    }
+
+    /// Advances to the next token in the token stream and returns the current token.
+    ///
+    /// This method replaces the current token (`self.cur_tkn`) with the next token
+    /// in the token stream (`self.tkn_strm`). It consumes and returns the replaced token.
+    ///
+    fn advance_token(&mut self) -> Token {
+        mem::replace(&mut self.cur_tkn, self.tkn_strm.next().unwrap())
+    }
+
+    fn stack_extend(&mut self, node: &str) {
+        let ext = self
+            .prsr_tbl
+            .get(&(node, self.cur_tkn.as_terminal()))
+            .expect("Error: Invalid syntax");
+
+        self.stack.extend(ext);
+    }
+
+    fn pop_extend(&mut self, node: &str) {
+        self.stack.pop();
+        self.stack_extend(node);
+    }
+
+    #[cfg(debug_assertions)]
+    fn dbg(&self, caller: &str) {
+        println!(
+            "{}\nstack: {:?}\ncur_tkn: {:?}\n",
+            caller, self.stack, self.cur_tkn
+        );
     }
 }
 
@@ -66,11 +104,39 @@ where
     I: Iterator<Item = Token>,
 {
     fn expr(&mut self) -> Node {
-        Node::Eps
+        self.advance_token();
+        self.pop_extend("E");
+        self.dbg("expr");
+
+        let term = self.term();
+        let expr_prime = self.expr_prime();
+
+        Node::Expr {
+            t: Box::new(term),
+            ep: Box::new(expr_prime),
+        }
     }
 
     fn expr_prime(&mut self) -> Node {
-        Node::Eps
+        self.pop_extend("Ep");
+        self.dbg("expr_prime");
+
+        let op = match self.cur_tkn.as_terminal() {
+            "+" | "-" => {
+                self.stack.pop();
+                self.advance_token().get_op()
+            }
+            _ => return Node::Eps,
+        };
+
+        let term = self.term();
+        let expr_prime = self.expr_prime();
+
+        Node::ExprPrime {
+            op,
+            t: Box::new(term),
+            ep: Box::new(expr_prime),
+        }
     }
 }
 
@@ -80,11 +146,38 @@ where
     I: Iterator<Item = Token>,
 {
     fn term(&mut self) -> Node {
-        Node::Eps
+        self.pop_extend("T");
+        self.dbg("term");
+
+        let factor = self.factor();
+        let term_prime = self.term_prime();
+
+        Node::Term {
+            f: Box::new(factor),
+            tp: Box::new(term_prime),
+        }
     }
 
     fn term_prime(&mut self) -> Node {
-        Node::Eps
+        self.pop_extend("Tp");
+        self.dbg("term_prime");
+
+        let op = match self.cur_tkn.as_terminal() {
+            "*" | "/" => {
+                self.stack.pop();
+                self.advance_token().get_op()
+            }
+            _ => return Node::Eps,
+        };
+
+        let factor = self.factor();
+        let term_prime = self.term_prime();
+
+        Node::TermPrime {
+            op,
+            f: Box::new(factor),
+            tp: Box::new(term_prime),
+        }
     }
 }
 
@@ -94,10 +187,30 @@ where
     I: Iterator<Item = Token>,
 {
     fn factor(&mut self) -> Node {
-        Node::Eps
+        self.pop_extend("F");
+        self.dbg("factor");
+
+        self.stack.pop();
+
+        if "id" == self.cur_tkn.as_terminal() {
+            return Node::Factor {
+                id: self.advance_token().get_num(),
+            };
+        } else {
+            return self.paren();
+        }
     }
 
     fn paren(&mut self) -> Node {
-        Node::Eps
+        let expr = self.expr();
+
+        if ")" == self.cur_tkn.as_terminal() {
+            self.stack.pop();
+            self.advance_token();
+        } else {
+            panic!("Error: Missing closing parenthesis ')'");
+        }
+
+        Node::Paren { e: Box::new(expr) }
     }
 }
