@@ -2,15 +2,24 @@
 // - only simple expressions will be supported
 // - all numbers must be positive
 // - only grouping with () and * / + - will be supported
-// - 5(2+1) will not be interpreted as 5*(2+1) this must be specified
+// - x(y+z) will not be interpreted as x*(y+z) this must be specified
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Paren {
     OParen,
     CParen,
 }
 
-#[derive(Debug, PartialEq)]
+impl Paren {
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            Paren::OParen => "(",
+            Paren::CParen => ")",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum BinOp {
     Mul,
     Div,
@@ -18,7 +27,18 @@ pub(crate) enum BinOp {
     Sub,
 }
 
-#[derive(Debug, PartialEq)]
+impl BinOp {
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Token {
     Parenthesis(Paren),
     Operator(BinOp),
@@ -41,6 +61,36 @@ impl Token {
 
     pub(crate) fn build_num_token(num: String) -> Self {
         Token::Number(num.parse::<f64>().unwrap())
+    }
+
+    pub fn get_paren(self) -> Paren {
+        match self {
+            Token::Parenthesis(inner) => inner,
+            _ => panic!("Token was not a Parenthesis"),
+        }
+    }
+
+    pub fn get_op(self) -> BinOp {
+        match self {
+            Token::Operator(inner) => inner,
+            _ => panic!("Token was not a Operator"),
+        }
+    }
+
+    pub fn get_num(self) -> f64 {
+        match self {
+            Token::Number(inner) => inner,
+            _ => panic!("Token was not a Number"),
+        }
+    }
+
+    pub fn as_terminal(&self) -> &str {
+        match self {
+            Token::Parenthesis(inner) => inner.as_terminal(),
+            Token::Operator(inner) => inner.as_terminal(),
+            Token::Number(_) => "id",
+            Token::Eos => "$",
+        }
     }
 }
 
@@ -74,9 +124,17 @@ pub(crate) enum Node {
     Factor { id: f64 },
     /// (E)
     Paren { e: Box<Self> },
+    /// Epsilon
+    Eps,
 }
 
 #[derive(Debug)]
 pub(crate) struct Ast {
     root: Node,
+}
+
+impl Ast {
+    pub fn new(root: Node) -> Self {
+        Self { root }
+    }
 }
