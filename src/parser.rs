@@ -1,4 +1,4 @@
-use crate::ast::{self, Ast, Node, Token};
+use crate::ast::{Ast, Node, Token};
 use std::{collections::HashMap, mem};
 
 type ParserTable<'tbl> = HashMap<(&'tbl str, &'tbl str), Vec<&'tbl str>>;
@@ -96,6 +96,9 @@ where
             caller, self.stack, self.cur_tkn
         );
     }
+
+    #[cfg(not(debug_assertions))]
+    fn dbg(&self, _caller: &str) {}
 }
 
 // Handles Expr and ExprPrime
@@ -193,11 +196,11 @@ where
         self.stack.pop();
 
         if "id" == self.cur_tkn.as_terminal() {
-            return Node::Factor {
+            Node::Factor {
                 id: self.advance_token().get_num(),
-            };
+            }
         } else {
-            return self.paren();
+            self.paren()
         }
     }
 

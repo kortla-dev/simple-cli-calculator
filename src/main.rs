@@ -1,5 +1,6 @@
 mod ast;
 mod cli;
+mod evaluator;
 mod lexer;
 mod parser;
 
@@ -15,5 +16,5 @@ fn main() {
 
     let ast = parser.get_ast();
 
-    println!("Hello, world!");
+    println!("{}", evaluator::exec(ast));
 }
