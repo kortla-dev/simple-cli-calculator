@@ -102,8 +102,8 @@ impl Token {
 /// T' -> *FT' | /FT' | ''
 /// F  -> id | (E)
 /// ```
-#[derive(Debug)]
-pub(crate) enum Node {
+#[derive(Debug, PartialEq)]
+pub enum Node {
     /// E(T, E')
     Expr { t: Box<Self>, ep: Box<Self> },
     /// E'(T, E')
@@ -129,8 +129,8 @@ pub(crate) enum Node {
 }
 
 #[derive(Debug)]
-pub(crate) struct Ast {
-    root: Node,
+pub struct Ast {
+    pub root: Node,
 }
 
 impl Ast {
